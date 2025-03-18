@@ -1,6 +1,6 @@
 # kalico-toolchanger
 
-A fork of klipper-toolchanger, aimed to bring support for Kalico. Does not work yet.
+A fork of klipper-toolchanger, aimed to bring support for Kalico. Homing works, still testing crash detection
 
 
 # Installation
