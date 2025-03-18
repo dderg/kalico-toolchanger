@@ -115,7 +115,7 @@ class ToolProbeEndstop:
 
     def add_probe(self, config, tool_probe):
         if (tool_probe.tool in self.tool_probes):
-            raise config.error("Duplicate tool probe nr: %s" % (tool_probe.tool,))
+            raise config.error("Duplicate tool probe nr: " + tool_probe.tool)
         self.tool_probes[tool_probe.tool] = tool_probe
 
     def set_active_probe(self, tool_probe):
