@@ -1,6 +1,7 @@
-# klipper-toolchanger
+# kalico-toolchanger
 
-An assortment of Klipper extensions that I have made while working on [Tapchanger](https://github.com/viesturz/tapchanger)
+A fork of klipper-toolchanger, aimed to bring support for Kalico. Does not work yet.
+
 
 # Installation
 
