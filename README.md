@@ -8,7 +8,7 @@ A fork of klipper-toolchanger, aimed to bring support for Kalico. Homing works, 
 To install this plugin, run the installation script using the following command over SSH. This script will download this GitHub repository to your RaspberryPi home directory, and symlink the files in the Klipper extra folder.
 
 ```
-wget -O - https://raw.githubusercontent.com/viesturz/klipper-toolchanger/main/install.sh | bash
+wget -O - https://raw.githubusercontent.com/dderg/kalico-toolchanger/main/install.sh | bash
 ```
 
 Then, add the following to your moonraker.conf to enable automatic updates:
@@ -17,7 +17,7 @@ Then, add the following to your moonraker.conf to enable automatic updates:
 type: git_repo
 channel: dev
 path: ~/klipper-toolchanger
-origin: https://github.com/viesturz/klipper-toolchanger.git
+origin: https://github.com/dderg/kalico-toolchanger.git
 managed_services: klipper
 primary_branch: main
 ```
