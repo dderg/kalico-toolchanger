@@ -38,6 +38,7 @@ class Toolchanger:
         self.initialize_on = config.getchoice(
             'initialize_on', init_options, 'first-use')
         self.verify_tool_pickup = config.getboolean('verify_tool_pickup', True)
+        self.require_tool_present = config.getboolean('require_tool_present', False)
         self.transfer_fan_speed = config.getboolean('transfer_fan_speed', True)
         self.uses_axis = config.get('uses_axis', 'xyz').lower()
         home_options = {'abort': ON_AXIS_NOT_HOMED_ABORT,
@@ -90,9 +91,10 @@ class Toolchanger:
         self.gcode.register_command("SELECT_TOOL_ERROR",
                                     self.cmd_SELECT_TOOL_ERROR,
                                     desc=self.cmd_SELECT_TOOL_ERROR_help)
-        self.gcode.register_command("UNSELECT_TOOL",
-                                    self.cmd_UNSELECT_TOOL,
-                                    desc=self.cmd_UNSELECT_TOOL_help)
+        if not self.require_tool_present:
+            self.gcode.register_command("UNSELECT_TOOL",
+                                        self.cmd_UNSELECT_TOOL,
+                                        desc=self.cmd_UNSELECT_TOOL_help)
         self.gcode.register_command("TEST_TOOL_DOCKING",
                                     self.cmd_TEST_TOOL_DOCKING,
                                     desc=self.cmd_TEST_TOOL_DOCKING_help)
@@ -155,9 +157,7 @@ class Toolchanger:
     cmd_INITIALIZE_TOOLCHANGER_help = "Initialize the toolchanger"
 
     def cmd_INITIALIZE_TOOLCHANGER(self, gcmd):
-        tool = self.gcmd_tool(gcmd, None)
-        if tool is None and self.has_detection:
-            tool = self.require_detected_tool(gcmd)
+        tool = self.gcmd_tool(gcmd, self.detected_tool)
         self.initialize(tool)
 
     cmd_SELECT_TOOL_help = 'Select active tool'
@@ -256,10 +256,15 @@ class Toolchanger:
             self.status = STATUS_INITIALIZING
             self.run_gcode('initialize_gcode', self.initialize_gcode, extra_context)
 
-        if select_tool:
+        if select_tool or self.has_detection:
             self._configure_toolhead_for_tool(select_tool)
-            self.run_gcode('after_change_gcode', select_tool.after_change_gcode, extra_context)
-            self._set_tool_gcode_offset(select_tool, 0.0)
+            if select_tool:
+                self.run_gcode('after_change_gcode', select_tool.after_change_gcode, extra_context)
+                self._set_tool_gcode_offset(select_tool, 0.0)
+            if self.require_tool_present and self.active_tool is None:
+                raise self.gcode.error(
+                    '%s failed to initialize, require_tool_present set and no tool present after initialization' % (
+                    self.name,))
 
         if should_run_initialize:
             if self.status == STATUS_INITIALIZING:
@@ -372,13 +377,13 @@ class Toolchanger:
 
     def note_detect_change(self, tool):
         detected = None
-        detected_count = 0
+        detected_names = []
         for tool in self.tools.values():
             if tool.detect_state == DETECT_PRESENT:
                 detected = tool
-                detected_count += 1
-        if detected_count > 1:
-            # multiple tools detected
+                detected_names.append(tool.name)
+        if len(detected_names) > 1:
+            self.gcode.respond_info("Multiple tools detected: %s" % (detected_names,))
             detected = None
         self.detected_tool = detected
 
@@ -410,6 +415,8 @@ class Toolchanger:
             return
         toolhead = self.printer.lookup_object('toolhead')
         toolhead.wait_moves()
+        # Wait some to allow tool sensors to update
+        toolhead.dwell(.2)
         self.validate_detected_tool(expected, gcmd)
 
     def _configure_toolhead_for_tool(self, tool):
