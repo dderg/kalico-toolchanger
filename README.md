@@ -1,6 +1,6 @@
 # kalico-toolchanger
 
-A fork of klipper-toolchanger, aimed to bring support for Kalico. Homing works, still testing crash detection
+A fork of klipper-toolchanger, I have tested that it works on my printer, but your milage may vary. 
 
 
 # Installation
