@@ -261,7 +261,44 @@ class ToolProbeEndstop:
             return
         if self.crash_detection_active:
             self.crash_detection_active = False
+
+            # Check if toolchanger is mid-change and delegate to its error handling
+            if self._handle_crash_during_toolchange():
+                return
+
+            # Not during toolchange, run crash_gcode as normal
             self.crash_gcode.run_gcode_from_command()
+
+    def _handle_crash_during_toolchange(self):
+        """
+        Check if a toolchange is in progress and handle crash via toolchanger.
+        Returns True if handled by toolchanger, False otherwise.
+        """
+        toolchanger = self.printer.lookup_object('toolchanger', default=None)
+        if toolchanger is None:
+            return False
+
+        # Check if toolchanger is in the middle of a tool change
+        # current_change_id != -1 indicates a toolchange is in progress
+        if not hasattr(toolchanger, 'current_change_id') or toolchanger.current_change_id == -1:
+            return False
+
+        # Check if toolchanger has error_gcode defined - if not, fall back to crash_gcode
+        if not getattr(toolchanger, 'error_gcode', None):
+            logging.warning("tool_probe_endstop: Crash during toolchange but no error_gcode defined, using crash_gcode")
+            return False
+
+        # Toolchange in progress - use toolchanger's error handling
+        # This will go through _process_error() which fixes the pause position
+        expected_tool = getattr(toolchanger, 'last_change_pickup_tool', None)
+        expected_name = expected_tool.name if expected_tool else "unknown"
+        message = "Tool crash detected during toolchange (expected %s)" % (expected_name,)
+
+        logging.info("tool_probe_endstop: %s - delegating to toolchanger error handling", message)
+
+        # Call SELECT_TOOL_ERROR which triggers _process_error()
+        self.gcode.run_script_from_command('SELECT_TOOL_ERROR MESSAGE="%s"' % (message,))
+        return True
 
 # Endstop wrapper that routes commands to the selected tool probe.
 class ToolProbeEndstopWrapper:
